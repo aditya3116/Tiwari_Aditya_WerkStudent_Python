@@ -1,51 +1,107 @@
-import os
+import fitz  # PyMuPDF
+import re
+import xlsxwriter
 import pandas as pd
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
+import os
 
-# Step 1: Define file paths
-invoice_files = ["sample_invoice_1.pdf", "sample_invoice_2.pdf"]  # Replace with your actual file names
+# Config setup with patterns
+doc_extraction_rules = {
+    "sample_invoice_1.pdf": {
+        "rules": {
+            "invoice_total": r"Gross Amount incl\. VAT\s*[\r\n]+(\d{1,3}(?:[.,]\d{2})?\s*)",
+            "invoice_date": r"Date\s*[\r\n]+\s*(\d+\.\s+\w+\s+\d{4})"
+        }
+    },
+    "sample_invoice_2.pdf": {
+        "rules": {
+            "invoice_total": r"Total[\s\n]*USD \$([\d,]+\.\d{2})",
+            "invoice_date": r"Invoice date:\s*(\w{3}\s\d{1,2},\s\d{4})"
+        }
+    }
+}
 
-# Step 2: Function to extract data from invoices
-def extract_invoice_data(file_path):
-    if "sample_invoice_1" in file_path:
-        return {"File Name": file_path, "Date": "1. März 2024", "Value": 453.53, "Currency": "EUR"}
-    elif "sample_invoice_2" in file_path:
-        return {"File Name": file_path, "Date": "Nov 26, 2016", "Value": 950.00, "Currency": "USD"}
+table_columns = ['Document_Name', 'Total_Amount', 'Doc_Date']
+result_excel = 'fetched_results.xlsx'
+result_csv = 'fetched_results.csv'
 
-# Step 3: Extract data from all invoices
-data = []
-for file in invoice_files:
-    data.append(extract_invoice_data(file))
+def get_document_data(doc_extraction_rules):
+    """Get data from documents using extraction rules"""
+    found_data = []
+    
+    for doc_name, extraction_config in doc_extraction_rules.items():
+        try:
+            # Open and read document
+            document = fitz.open(doc_name)
+            content = ""
+            for page_num in range(len(document)):
+                content += document[page_num].get_text()
+            
+            # Extract values using patterns
+            result_row = [doc_name]
+            for field, pattern in extraction_config["rules"].items():
+                matched = re.search(pattern, content)
+                result_row.append(matched.group(1) if matched else None)
+                
+            found_data.append(result_row)
+            
+        except Exception as e:
+            print(f"Error with document {doc_name}: {e}")
+            
+    return found_data
 
-# Convert to DataFrame
-df = pd.DataFrame(data)
+def save_to_spreadsheet(found_data, table_columns, result_excel):
+    """Save extracted data to spreadsheet"""
+    # Create workbook
+    doc = xlsxwriter.Workbook(result_excel)
+    sheet = doc.add_worksheet("DataSheet")
+    
+    # Write headers
+    for idx, header in enumerate(table_columns):
+        sheet.write(0, idx, header)
+    
+    # Write data rows
+    for row_idx, row_data in enumerate(found_data, start=1):
+        for col_idx, value in enumerate(row_data):
+            sheet.write(row_idx, col_idx, value)
+            
+    # Create data frame for pivot
+    df = pd.DataFrame(found_data, columns=table_columns)
+    
+    # Add pivot table
+    pivot = pd.pivot_table(df, 
+                          values='Total_Amount',
+                          index=['Doc_Date'],
+                          columns=['Document_Name'],
+                          aggfunc='sum',
+                          fill_value=0)
+    
+    # Add pivot to new sheet
+    pivot_sheet = doc.add_worksheet("PivotView")
+    
+    # Write pivot data
+    for i, idx in enumerate(pivot.index):
+        pivot_sheet.write(i+1, 0, idx)
+        for j, col in enumerate(pivot.columns):
+            if i == 0:
+                pivot_sheet.write(0, j+1, col)
+            pivot_sheet.write(i+1, j+1, pivot.iloc[i,j])
+            
+    doc.close()
+    
+def save_to_csv(result_excel, result_csv):
+    """Convert Excel to CSV format with semicolon delimiter"""
+    df = pd.read_excel(result_excel)
+    df.to_csv(result_csv, index=False, sep=';')
 
-# Step 4: Create an Excel file
-wb = Workbook()
-sheet1 = wb.active
-sheet1.title = "Invoice Data"
+def main():
+    # Extract data from documents
+    found_data = get_document_data(doc_extraction_rules)
+    
+    # Save to Excel with pivot
+    save_to_spreadsheet(found_data, table_columns, result_excel)
+    
+    # Create CSV version
+    save_to_csv(result_excel, result_csv)
 
-# Add data to Sheet 1
-for r in dataframe_to_rows(df, index=False, header=True):
-    sheet1.append(r)
-
-# Add pivot table to Sheet 2
-sheet2 = wb.create_sheet(title="Summary")
-pivot_data = df.groupby(["Date", "File Name"]).sum()["Value"].reset_index()
-for r in dataframe_to_rows(pivot_data, index=False, header=True):
-    sheet2.append(r)
-
-# Save Excel file
-excel_file_name = "Invoices.xlsx"
-wb.save(excel_file_name)
-
-# Step 5: Create a CSV file
-csv_file_name = "Invoices.csv"
-df.to_csv(csv_file_name, sep=";", index=False)
-
-# Step 6: Print success message
-print(f"Excel file '{excel_file_name}' and CSV file '{csv_file_name}' created successfully!")
-
-
-
+if __name__ == "__main__":
+    main()
