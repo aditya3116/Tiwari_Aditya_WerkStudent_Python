@@ -1,79 +1,46 @@
 
-# WerkStudent_Python
+## Introduction
+This Python application extracts financial data from PDF invoices and organizes it into Excel and CSV formats, facilitating easy analysis and record-keeping.
 
-## Overview
+## Project Structure
+```
+.
+├── extract.py           # Main script for data extraction
+├── executable           # Compiled version of the script for non-Python environments
+└── invoices             # Directory containing sample PDF invoices
+```
 
-This repository contains the interview task for the WerkStudent position in Python. The goal is to collect data from two sample invoices, create an Excel file with two sheets, and generate a CSV file. Additionally, an executable file should be provided to run the code.
+## Features
 
-## Task Details
+### PDF Parsing
+The application utilizes the PyMuPDF library (`fitz`) to parse PDF documents. It employs regular expressions to detect and extract key information:
+- **Amounts**: Identifies monetary values following specific keywords.
+- **Dates**: Extracts date formations related to invoice issuance.
 
-1. **Data Extraction**:
-    - Extract specific values from three sample invoices.
-    - For Sample 1, extract the value shown in the provided image.
-    - <img width="289" alt="image" src="https://github.com/user-attachments/assets/0cf000ff-c305-4ffe-beb4-1c02a04d06b6" />
-    - For Samples 2, extract the value shown in the provided image.
-    - <img width="497" alt="image" src="https://github.com/user-attachments/assets/ea6eb368-604d-4dd4-9235-fbc8ec36d275" />
+### Data Compilation
 
-2. **Excel File Creation**:
-    - Create an Excel file with two sheets:
-        - **Sheet 1**: Contains three columns - File Name, Date (scraped from the document), and Value.
-        - **Sheet 2**: Contains a pivot table with the date and value sum, and also by document name.
+#### Creating an Excel File
+The script writes the extracted data into an Excel file with two distinct sheets:
+- **Sheet 1 (DataSheet)**: Contains a tabular representation with columns for FileName, Date, and Amount, listing detailed information extracted from each invoice.
+- **Sheet 2 (Pivot Table)**: A pivot table summarizes the data from Sheet 1 by date, using the sum function to aggregate amounts. This setup helps in analyzing financial data over specific periods.
 
-3. **CSV File Creation**:
-    - Create a CSV file with all the data, including headers, and use a semicolon (;) as the separator.
+#### Creating a CSV File
+Following the data compilation in Excel, the script converts the workbook into a CSV file:
+- **Delimiter**: Configured to use a semicolon (`;`) as the delimiter to suit regional settings where commas serve as decimal points.
 
-4. **Executable File**:
-    - Provide an executable file (.exe) that can run the code if the files are in the same folder.
+### Executable Creation
+The Python script can be compiled into an executable using PyInstaller. This executable runs independently of a Python installation, making it practical for environments lacking Python support:
+```bash
+pyinstaller --onefile extract.py
+```
+The executable processes PDFs from the 'invoices' directory and automatically generates the Excel and CSV files.
 
-5. **Fork Creation**:
-    - Create a fork of this repository named `LastName_FirstName_WerkStudent_Python` (e.g., `Shovon_Golam_WerkStudent_Python`).
-    - Upload your code to this branch. No need to submit a pull request; the fork will be checked directly.
+## Usage
 
-6. **Documentation**:
-    - Include an explanation in the README file that a non-technical person can understand.
-    - Ensure the code is documented so that a technical person can understand it.
-
-7. **Problem Reporting**:
-    - If you face any problems or find it impossible to complete a task, document the issue in the README file of your branch. Explain what the problem was and why you were unable to complete it.
-
-
-## How It Works
-
-1. **Data Extraction**:
-    - The script reads the sample invoices and extracts the required values.
-    - The extracted data is stored in variables for further processing.
-
-2. **Excel File Creation**:
-    - The script creates an Excel file with two sheets.
-    - Sheet 1 contains the file name, extracted data, and value.
-    - Sheet 2 contains a pivot table summarizing the data by date and document name.
-
-3. **CSV File Creation**:
-    - The script generates a CSV file with the extracted data, including headers, and uses a semicolon as the separator.
-
-4. **Executable File**:
-    - An executable file is provided to run the entire code. Ensure the sample invoices are in the same folder as the executable file.
-
-5. **Requirements File**:
-    -A requirements.txt file is included to create the environment needed to run the code
-
-## Running the Code
-
-1. Place the sample invoices in the same folder as the executable file.
-2. Run the executable file to execute the code and generate the Excel and CSV files.
-
-
-## Documentation
-
-- The README file contains a non-technical explanation of the code.
-- The code is documented with comments to help technical users understand its functionality.
-
-## Problem Reporting
-
-- If you face any problems or find it impossible to complete a task, document the issue in the README file of your branch. Explain what the problem was and why you were unable to complete it.
-
-## Timeline
-
-- The time limit for this task is 9 January 2025. 
-
+### Script Execution
+To run the script from the command line:
+```bash
+python extract.py
+# This will process all PDFs within the 'invoices' directory.
+```
 
