@@ -1,10 +1,9 @@
-import fitz  # PyMuPDF
+import fitz  
 import re
 import xlsxwriter
 import pandas as pd
 import os
 
-# Config setup with patterns
 doc_extraction_rules = {
     "sample_invoice_1.pdf": {
         "rules": {
@@ -30,13 +29,11 @@ def get_document_data(doc_extraction_rules):
     
     for doc_name, extraction_config in doc_extraction_rules.items():
         try:
-            # Open and read document
             document = fitz.open(doc_name)
             content = ""
             for page_num in range(len(document)):
                 content += document[page_num].get_text()
             
-            # Extract values using patterns
             result_row = [doc_name]
             for field, pattern in extraction_config["rules"].items():
                 matched = re.search(pattern, content)
@@ -50,24 +47,18 @@ def get_document_data(doc_extraction_rules):
     return found_data
 
 def save_to_spreadsheet(found_data, table_columns, result_excel):
-    """Save extracted data to spreadsheet"""
-    # Create workbook
     doc = xlsxwriter.Workbook(result_excel)
     sheet = doc.add_worksheet("DataSheet")
     
-    # Write headers
     for idx, header in enumerate(table_columns):
         sheet.write(0, idx, header)
     
-    # Write data rows
     for row_idx, row_data in enumerate(found_data, start=1):
         for col_idx, value in enumerate(row_data):
             sheet.write(row_idx, col_idx, value)
             
-    # Create data frame for pivot
     df = pd.DataFrame(found_data, columns=table_columns)
     
-    # Add pivot table
     pivot = pd.pivot_table(df, 
                           values='Total_Amount',
                           index=['Doc_Date'],
@@ -75,10 +66,8 @@ def save_to_spreadsheet(found_data, table_columns, result_excel):
                           aggfunc='sum',
                           fill_value=0)
     
-    # Add pivot to new sheet
     pivot_sheet = doc.add_worksheet("PivotView")
     
-    # Write pivot data
     for i, idx in enumerate(pivot.index):
         pivot_sheet.write(i+1, 0, idx)
         for j, col in enumerate(pivot.columns):
@@ -89,18 +78,14 @@ def save_to_spreadsheet(found_data, table_columns, result_excel):
     doc.close()
     
 def save_to_csv(result_excel, result_csv):
-    """Convert Excel to CSV format with semicolon delimiter"""
     df = pd.read_excel(result_excel)
     df.to_csv(result_csv, index=False, sep=';')
 
 def main():
-    # Extract data from documents
     found_data = get_document_data(doc_extraction_rules)
     
-    # Save to Excel with pivot
     save_to_spreadsheet(found_data, table_columns, result_excel)
     
-    # Create CSV version
     save_to_csv(result_excel, result_csv)
 
 if __name__ == "__main__":
